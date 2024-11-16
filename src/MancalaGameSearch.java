@@ -7,7 +7,7 @@ public class MancalaGameSearch extends GameSearch {
   *         @return total score if total > 0 player is wining else losing or draw if 0
   * */
   public int calculateScore(MancalaPosition position){
-    int playerScore = position.board[6];
+    int playerScore = position.board[0];
     int computerScore = position.board[13];
 
     if (Debug){
@@ -43,7 +43,7 @@ public class MancalaGameSearch extends GameSearch {
   * */
   private boolean isGameOver(MancalaPosition pos) {
     boolean isGameOver = true;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 1; i < 7; i++) {
       if (pos.board[i] == 0) {
         isGameOver = false;
         break;
@@ -90,7 +90,14 @@ public class MancalaGameSearch extends GameSearch {
 
   @Override
   public Position makeMove(Position p, boolean player, Move move) {
-    return null;
+    MancalaMove mov = (MancalaMove) move;
+    MancalaPosition pos = (MancalaPosition) p;
+    MancalaPosition newPos = new MancalaPosition(pos.board , player);
+    for (int i = 1; i <= pos.board[mov.pitIndex]; i++) {
+      newPos.board[mov.pitIndex+i]++;
+    }
+
+    return newPos;
   }
 
   @Override
