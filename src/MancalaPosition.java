@@ -1,3 +1,5 @@
+import java.util.Arrays;
+
 public class MancalaPosition extends Position {
   private final int[] board;
   private boolean playerTurn; // true for Player 1, false for Player 2/AI
@@ -17,16 +19,45 @@ public class MancalaPosition extends Position {
 
   // Check if the game is over
   public boolean isGameOver() {
-    // Check if all Player 1 or Player 2 pits are empty
-    boolean player1Empty = true, player2Empty = true;
-    for (int i = 1; i <= 6; i++) {
-      if (board[i] > 0) player1Empty = false;
+    boolean allEmptyPlayer1 = true;
+    boolean allEmptyPlayer2 = true;
+
+    // Check if Player 1's pits are all empty
+    for (int i = 0; i < 6; i++) {
+      if (board[i] != 0) {
+        allEmptyPlayer1 = false;
+        break;
+      }
     }
-    for (int i = 7; i <= 12; i++) {
-      if (board[i] > 0) player2Empty = false;
+
+    // Check if Player 2's pits are all empty
+    for (int i = 7; i < 13; i++) {
+      if (board[i] != 0) {
+        allEmptyPlayer2 = false;
+        break;
+      }
     }
-    return player1Empty || player2Empty;
+
+
+
+
+    return allEmptyPlayer1 || allEmptyPlayer2;
   }
+
+
+  // Handle collecting remaining stones into stores
+  public void finalizeBoard() {
+    for (int i = 1; i <= 6; i++) {
+      board[0] += board[i];
+      board[i] = 0;
+    }
+
+    for (int i = 7; i <= 12; i++) {
+      board[13] += board[i];
+      board[i] = 0;
+    }
+  }
+
 
   // Execute a move and update the board state
   public MancalaPosition executeMove(MancalaMove move) {
@@ -60,6 +91,20 @@ public class MancalaPosition extends Position {
 
     return new MancalaPosition(board, nextPlayerTurn);
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) return false;
+    MancalaPosition that = (MancalaPosition) obj;
+    return playerTurn == that.playerTurn && Arrays.equals(this.board, that.board);
+  }
+
+  @Override
+  public int hashCode() {
+    return 31 * Arrays.hashCode(board) + (playerTurn ? 1 : 0);
+  }
+
 
   @Override
   public String toString() {

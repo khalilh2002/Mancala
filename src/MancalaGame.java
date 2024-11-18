@@ -10,7 +10,6 @@ public class MancalaGame {
             4, 4, 4, 4, 4, 4, 0  // Player 2's side (index 7-12), and stores (index 0, 13)
     };
 
-
     public void start() {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Welcome to Mancala!");
@@ -40,17 +39,20 @@ public class MancalaGame {
             // Print the board
             gameSearch.printPosition(position);
 
-            // Game-over checks
-            if (gameSearch.drawnPosition(position)) {
-                System.out.println("It's a draw!");
-                break;
-            }
-            if (gameSearch.wonPosition(position, true)) {
-                System.out.println(player1.getName() + " wins!");
-                break;
-            }
-            if (gameSearch.wonPosition(position, false)) {
-                System.out.println(player2.getName() + " wins!");
+            // Check if the game is over
+            if (position.isGameOver()) {
+                // Finalize the board (collect all remaining stones into stores)
+                position.finalizeBoard();
+                gameSearch.printPosition(position); // Print final board state
+
+                // Declare the winner based on stores' values
+                if (position.getBoard()[0] > position.getBoard()[13]) {
+                    System.out.println(player1.getName() + " wins!");
+                } else if (position.getBoard()[0] < position.getBoard()[13]) {
+                    System.out.println(player2.getName() + " wins!");
+                } else {
+                    System.out.println("It's a draw!");
+                }
                 break;
             }
 
@@ -64,7 +66,6 @@ public class MancalaGame {
             }
         }
     }
-
 
     public static void main(String[] args) {
         MancalaGame game = new MancalaGame();

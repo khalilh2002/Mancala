@@ -12,6 +12,8 @@ public class MancalaGameSearch extends GameSearch {
     return pos.getBoard()[0] + pos.getBoard()[13] == 48;
   }
 
+
+
   @Override
   public boolean wonPosition(Position p, boolean player) {
     MancalaPosition pos = (MancalaPosition) p;
