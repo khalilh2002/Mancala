@@ -111,6 +111,48 @@ public class MancalaGameSearch {
     return new MancalaPosition(newBoard, nextTurn ? player : !player);
   }
 
+  private Vector easyAIMove(Position p, boolean player) {
+    Position[] possibleMoves = possibleMoves(p, player);
+
+    // If no moves are available, return the evaluation
+    if (possibleMoves.length == 0) {
+      Vector result = new Vector();
+      result.addElement(positionEvaluation(p, player));
+      result.addElement(null);
+      return result;
+    }
+
+
+    // Randomly select a move from the available moves
+    Random random = new Random();
+    int randomIndex = random.nextInt(possibleMoves.length);
+    Position selectedMove = possibleMoves[randomIndex];
+
+    // Return the selected move as the "best" move
+    Vector result = new Vector();
+    result.addElement(positionEvaluation(selectedMove, player));
+    result.addElement(selectedMove);
+    return result;
+  }
+
+  private Vector mediumAIMove(int depth, Position p, boolean player) {
+    Random random = new Random();
+
+    // 70% chance to use alpha-beta pruning, 30% chance to make a random move
+    boolean useAlphaBeta = random.nextInt(100) < 70;
+
+    if (useAlphaBeta) {
+      // Use alpha-beta pruning with a moderate depth
+      int maxDepth = 4; // Medium-level depth
+      return alphaBetaHelper(depth, p, player, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, maxDepth);
+    } else {
+      // Make a random move like Easy AI
+      return easyAIMove(p, player);
+    }
+  }
+
+
+
   private boolean isGameOver(MancalaPosition pos) {
     boolean playerSideEmpty = Arrays.stream(pos.board, 0, 6).allMatch(seeds -> seeds == 0);
     boolean computerSideEmpty = Arrays.stream(pos.board, 7, 13).allMatch(seeds -> seeds == 0);
@@ -144,6 +186,18 @@ public class MancalaGameSearch {
       mode = scanner.nextInt();
     } while (mode != 1 && mode != 2);
 
+    int aiDifficulty = 1; // Default difficulty (Easy)
+    if (mode == 1) { // Human vs AI
+      System.out.println("Choose AI difficulty:");
+      System.out.println("1. Easy");
+      System.out.println("2. Medium");
+      System.out.println("3. Hard");
+      do {
+        System.out.print("Enter your choice (1, 2, or 3): ");
+        aiDifficulty = scanner.nextInt();
+      } while (aiDifficulty < 1 || aiDifficulty > 3);
+    }
+
     Position current = startingPosition;
     boolean isPlayer1Turn = humanPlayFirst; // Track turns for Human vs Human mode.
 
@@ -170,7 +224,7 @@ public class MancalaGameSearch {
           current = makeMove(current, true, move);
         } else {
           System.out.println("AI's move:");
-          Vector result = alphaBeta(0, current, false); // AI calculates move
+          Vector result = alphaBeta(0, current, false, aiDifficulty); // AI calculates move based on difficulty
           current = (Position) result.elementAt(1);
         }
         humanPlayFirst = !humanPlayFirst; // Toggle turns
@@ -179,18 +233,18 @@ public class MancalaGameSearch {
       } else {
         if (isPlayer1Turn) {
           System.out.println("Player 1's move (choose from pits 0-5):");
-          Move move = createMove(0, 5, ((MancalaPosition) current).board); // Pass the board
+          Move move = createMove(0, 5, ((MancalaPosition) current).board); // Player 1 selects from pits 0-5
           current = makeMove(current, true, move);
         } else {
           System.out.println("Player 2's move (choose from pits 7-12):");
-          Move move = createMove(7, 12, ((MancalaPosition) current).board); // Pass the board
+          Move move = createMove(7, 12, ((MancalaPosition) current).board); // Player 2 selects from pits 7-12
           current = makeMove(current, false, move);
         }
-
         isPlayer1Turn = !isPlayer1Turn; // Toggle turns
       }
     }
   }
+
 
 
 
@@ -215,9 +269,25 @@ public class MancalaGameSearch {
 
 
 
+  protected Vector alphaBeta(int depth, Position p, boolean player, int difficulty) {
+    int maxDepth;
+    switch (difficulty) {
+      case 1: // Easy AI
+        return easyAIMove(p, player);
+      case 2: // Medium AI
+        return mediumAIMove(depth, p, player);
+      case 3: // Hard AI
+        maxDepth = 10; // Hard: Deep search
+        break;
+      default:
+        maxDepth = 5; // Default to Medium
+    }
+    return alphaBetaHelper(depth, p, player, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, maxDepth);
+  }
 
-  protected Vector alphaBetaHelper(int depth, Position p, boolean player, float alpha, float beta) {
-    if (reachedMaxDepth(p, depth) || isGameOver((MancalaPosition) p)) {
+
+  protected Vector alphaBetaHelper(int depth, Position p, boolean player, float alpha, float beta, int maxDepth) {
+    if (reachedMaxDepth(p, depth, maxDepth) || isGameOver((MancalaPosition) p)) {
       Vector result = new Vector();
       result.addElement(positionEvaluation(p, player));
       result.addElement(null);
@@ -229,7 +299,7 @@ public class MancalaGameSearch {
 
     Position[] moves = possibleMoves(p, player);
     for (Position move : moves) {
-      Vector result = alphaBetaHelper(depth + 1, move, !player, -beta, -alpha);
+      Vector result = alphaBetaHelper(depth + 1, move, !player, -beta, -alpha, maxDepth);
       float value = -((Float) result.elementAt(0));
 
       if (value > alpha) {
@@ -248,11 +318,8 @@ public class MancalaGameSearch {
     return best;
   }
 
-  protected Vector alphaBeta(int depth, Position p, boolean player) {
-    return alphaBetaHelper(depth, p, player, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
+  protected boolean reachedMaxDepth(Position p, int depth, int maxDepth) {
+    return depth >= maxDepth || isGameOver((MancalaPosition) p);
   }
 
-  protected boolean reachedMaxDepth(Position p, int depth) {
-    return depth > 10 || isGameOver((MancalaPosition) p);
-  }
 }
