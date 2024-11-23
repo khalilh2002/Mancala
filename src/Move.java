@@ -1,2 +1,2 @@
-public class Move {
-}
+
+abstract class Move {}

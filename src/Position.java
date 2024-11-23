@@ -1,2 +1,1 @@
-public class Position {
-}
+abstract class Position {}
