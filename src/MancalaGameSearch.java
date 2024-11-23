@@ -165,48 +165,91 @@ public class MancalaGameSearch {
     return player ? playerScore - computerScore : computerScore - playerScore;
   }
 
-  public Move createMove() {
-    Scanner scanner = new Scanner(System.in);
-    int pit;
-    do {
-      System.out.print("Choose a pit (0-5): ");
-      pit = scanner.nextInt();
-    } while (pit < 0 || pit > 5);
-    return new MancalaMove(pit);
-  }
 
   public void playGame(Position startingPosition, boolean humanPlayFirst) {
     Scanner scanner = new Scanner(System.in);
-    System.out.println("Choose mode:");
-    System.out.println("1. Human vs AI");
-    System.out.println("2. Human vs Human");
-    int mode;
+
+    System.out.println("Choose an option:");
+    System.out.println("1. Start a New Game");
+    System.out.println("2. Load a Saved Game");
+    int choice;
     do {
       System.out.print("Enter your choice (1 or 2): ");
-      mode = scanner.nextInt();
-    } while (mode != 1 && mode != 2);
+      while (!scanner.hasNextInt()) {
+        System.out.println("Invalid input, please enter 1 or 2.");
+        scanner.next(); // Clear invalid input
+      }
+      choice = scanner.nextInt();
+      if (choice != 1 && choice != 2) {
+        System.out.println("Invalid option, try again!");
+      }
+    } while (choice != 1 && choice != 2);
 
-    int aiDifficulty = 1; // Default difficulty (Easy)
-    if (mode == 1) { // Human vs AI
-      System.out.println("Choose AI difficulty:");
-      System.out.println("1. Easy");
-      System.out.println("2. Medium");
-      System.out.println("3. Hard");
+    Position current;
+    boolean isPlayer1Turn = humanPlayFirst;
+    int mode;
+    int difficulty = 2; // Default to Medium difficulty
+
+    if (choice == 1) {
+      // New game
+      System.out.println("Choose mode:");
+      System.out.println("1. Human vs AI");
+      System.out.println("2. Human vs Human");
       do {
-        System.out.print("Enter your choice (1, 2, or 3): ");
-        aiDifficulty = scanner.nextInt();
-      } while (aiDifficulty < 1 || aiDifficulty > 3);
+        System.out.print("Enter your choice (1 or 2): ");
+        while (!scanner.hasNextInt()) {
+          System.out.println("Invalid input, please enter 1 or 2.");
+          scanner.next(); // Clear invalid input
+        }
+        mode = scanner.nextInt();
+        if (mode != 1 && mode != 2) {
+          System.out.println("Invalid option, try again!");
+        }
+      } while (mode != 1 && mode != 2);
+
+      // If Human vs AI, select AI difficulty
+      if (mode == 1) {
+        System.out.println("Select AI difficulty:");
+        System.out.println("1. Easy");
+        System.out.println("2. Medium");
+        System.out.println("3. Hard");
+        do {
+          System.out.print("Enter AI difficulty (1, 2, or 3): ");
+          while (!scanner.hasNextInt()) {
+            System.out.println("Invalid input, please enter 1, 2, or 3.");
+            scanner.next(); // Clear invalid input
+          }
+          difficulty = scanner.nextInt();
+          if (difficulty < 1 || difficulty > 3) {
+            System.out.println("Invalid option, try again!");
+          }
+        } while (difficulty < 1 || difficulty > 3);
+      }
+      current = startingPosition;
+    } else {
+      // Load saved game
+      System.out.print("Enter the filename of the saved game: ");
+      scanner.nextLine(); // Consume newline
+      String fileName = scanner.nextLine();
+      Object[] loadedState = GameStateManager.loadGameState(fileName);
+      if (loadedState == null) {
+        System.out.println("Failed to load game. Starting a new game instead.");
+        return; // Exit or default to new game
+      }
+      current = (Position) loadedState[0];
+      isPlayer1Turn = (boolean) loadedState[1];
+      mode = (int) loadedState[2];
+      if (mode == 1) {
+        difficulty = (int) loadedState[3]; // Load difficulty if it's a Human vs AI game
+      }
     }
 
-    Position current = startingPosition;
-    boolean isPlayer1Turn = humanPlayFirst; // Track turns for Human vs Human mode.
-
     while (true) {
-      printPosition(current,mode);
+      printPosition(current, mode); // Print board after each move
 
       // Check game-ending conditions
       if (wonPosition(current, false)) {
-        System.out.println(mode == 1 ? "Program won!" : "Player 2 won!");
+        System.out.println(mode == 1 ? "AI won!" : "Player 2 won!");
         break;
       } else if (wonPosition(current, true)) {
         System.out.println("Player 1 won!");
@@ -216,31 +259,57 @@ public class MancalaGameSearch {
         break;
       }
 
-      // Human vs AI mode
-      if (mode == 1) {
-        if (humanPlayFirst) {
-          System.out.println("Your move:");
-          Move move = createMove(0, 5, ((MancalaPosition) current).board); // Human moves from pits 0-5
-          current = makeMove(current, true, move);
-        } else {
-          System.out.println("AI's move:");
-          Vector result = alphaBeta(0, current, false, aiDifficulty); // AI calculates move based on difficulty
-          current = (Position) result.elementAt(1);
-        }
-        humanPlayFirst = !humanPlayFirst; // Toggle turns
+      // Handle turn-based actions
+      if (isPlayer1Turn) {
+        System.out.println("Player 1's move:");
+        Move playerMove = createMove(0, 5, ((MancalaPosition) current).board);
 
-        // Human vs Human mode
-      } else {
-        if (isPlayer1Turn) {
-          System.out.println("Player 1's move (choose from pits 0-5):");
-          Move move = createMove(0, 5, ((MancalaPosition) current).board); // Player 1 selects from pits 0-5
-          current = makeMove(current, true, move);
+        if (playerMove == null) { // Check if the player pressed 'S' to save
+          System.out.print("Do you want to save the game? (Yes/No): ");
+          String saveOption = scanner.next().toLowerCase();
+          if (saveOption.equals("yes")) {
+            System.out.print("Enter a filename to save the game: ");
+            String fileName = scanner.next();
+            GameStateManager.saveGameState((MancalaPosition) current, isPlayer1Turn, mode, difficulty, fileName);
+            System.out.println("Game saved successfully.");
+          } else {
+            System.out.println("Continuing without saving...");
+          }
+          continue; // Skip the turn and repeat the loop
         } else {
-          System.out.println("Player 2's move (choose from pits 7-12):");
-          Move move = createMove(7, 12, ((MancalaPosition) current).board); // Player 2 selects from pits 7-12
-          current = makeMove(current, false, move);
+          current = makeMove(current, true, playerMove); // Apply Player 1's move
+          printPosition(current, mode); // Print the board after Player 1's move
+          isPlayer1Turn = !isPlayer1Turn; // Toggle turn after valid move
         }
-        isPlayer1Turn = !isPlayer1Turn; // Toggle turns
+      }
+
+      // AI's turn (Human vs AI mode)
+      if (mode == 1 && !isPlayer1Turn) {
+        System.out.println("AI's move:");
+        Vector result = alphaBeta(0, current, false, difficulty); // Pass difficulty to AI
+        current = (Position) result.elementAt(1);
+        printPosition(current, mode); // Print the board after AI's move
+        isPlayer1Turn = !isPlayer1Turn; // Toggle turn after AI move
+      } else if (mode == 2 && !isPlayer1Turn) {
+        System.out.println("Player 2's move:");
+        Move playerMove = createMove(7, 12, ((MancalaPosition) current).board);
+        if (playerMove == null) { // Check if the player pressed 'S' to save
+          System.out.print("Do you want to save the game? (Yes/No): ");
+          String saveOption = scanner.next().toLowerCase();
+          if (saveOption.equals("yes")) {
+            System.out.print("Enter a filename to save the game: ");
+            String fileName = scanner.next();
+            GameStateManager.saveGameState((MancalaPosition) current, isPlayer1Turn, mode, difficulty, fileName);
+            System.out.println("Game saved successfully.");
+          } else {
+            System.out.println("Continuing without saving...");
+          }
+          continue; // Skip the turn and repeat the loop
+        } else {
+          current = makeMove(current, false, playerMove); // Apply Player 2's move
+          printPosition(current, mode); // Print the board after Player 2's move
+          isPlayer1Turn = !isPlayer1Turn; // Toggle turn after valid move
+        }
       }
     }
   }
@@ -251,18 +320,25 @@ public class MancalaGameSearch {
   public Move createMove(int start, int end, int[] board) {
     Scanner scanner = new Scanner(System.in);
     int pit;
-
     while (true) {
-      System.out.print("Choose a pit (" + start + "-" + end + "): ");
-      pit = scanner.nextInt();
+      System.out.print("Choose a pit (" + start + "-" + end + ") or press 'S' to save: ");
+      String input = scanner.nextLine().toUpperCase();
 
-      // Validate the chosen pit
-      if (pit < start || pit > end || pit % 7 == 6) {
-        System.out.println("Invalid move! Please select a valid pit.");
-      } else if (board[pit] == 0) {
-        System.out.println("Invalid move! The selected pit has 0 seeds.");
-      } else {
-        return new MancalaMove(pit); // Valid move
+      if (input.equals("S")) {
+        return null; // Indicating save requested
+      }
+
+      try {
+        pit = Integer.parseInt(input);
+        if (pit < start || pit > end || pit % 7 == 6) {
+          System.out.println("Invalid move! Please select a valid pit.");
+        } else if (board[pit] == 0) {
+          System.out.println("Invalid move! The selected pit has 0 seeds.");
+        } else {
+          return new MancalaMove(pit); // Valid move
+        }
+      } catch (NumberFormatException e) {
+        System.out.println("Invalid input! Please select a valid pit or press 'S' to save.");
       }
     }
   }
