@@ -5,7 +5,7 @@ public class MancalaGameSearch {
 
   public static final boolean DEBUG = false;
   private int heuristicType = 1; // Par défaut, utiliser l'heuristique simple
-
+  public static int possbileHint = 3 ;
 
   public boolean drawnPosition(Position p) {
     MancalaPosition pos = (MancalaPosition) p;
@@ -188,6 +188,9 @@ public class MancalaGameSearch {
 
   // Add this method to MancalaGameSearch
   public int getHint(Position p, boolean player) {
+    if (MancalaGameSearch.possbileHint==0 || MancalaGameSearch.possbileHint < 0){
+      return -2;
+    }
     Vector result = alphaBeta(0, p, player, 3); // Depth 3 for a reasonably good suggestion
     Position bestMove = (Position) result.elementAt(1);
 
@@ -201,6 +204,7 @@ public class MancalaGameSearch {
 
       for (int i = start; i <= end; i++) {
         if (current.board[i] != suggested.board[i]) {
+          MancalaGameSearch.possbileHint--;
           return i; // Return the pit index to play
         }
       }
@@ -359,10 +363,13 @@ public class MancalaGameSearch {
               System.out.println("Game saved successfully!");
             } else if (optionInput.equals("H")) {
               int hintIndex = getHint(current, true); // true for Player 1
-              if (hintIndex != -1) {
-                System.out.println("Hint: Pick pit " + hintIndex + " as your next move.");
-              } else {
+              if (hintIndex == -1 ) {
                 System.out.println("No valid moves available for a hint.");
+
+              } else if (hintIndex == -2) {
+                System.out.println("Warning you reached max hint(3) ");
+              } else {
+                System.out.println("Hint: Pick pit " + hintIndex + " as your next move.");
               }
 
             } else {
