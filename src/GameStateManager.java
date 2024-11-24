@@ -13,7 +13,6 @@ public class GameStateManager {
                 writer.println(difficulty);
                 writer.println(heuristic);
             }
-            System.out.println("Game saved successfully!");
         } catch (IOException e) {
             System.err.println("Error saving game: " + e.getMessage());
         }
