@@ -213,9 +213,6 @@ public class MancalaGameSearch {
       seeds--;
     }
 
-    // Check if the last seed landed in the player's scoring pit (Condition 2)
-    boolean nextTurn = (player && currentIndex == 6) || (!player && currentIndex == 13);
-
     // Capture logic (Condition 1)
     if (player && currentIndex >= 0 && currentIndex <= 5 && newBoard[currentIndex] == 1) {
       int oppositeIndex = 12 - currentIndex; // Opposite pit index
@@ -233,9 +230,15 @@ public class MancalaGameSearch {
       }
     }
 
-    // Return updated position with turn change (if not an extra turn)
-    return new MancalaPosition(newBoard, nextTurn ? player : !player);
+    // Check if the last seed landed in the player's scoring pit (Condition 2)
+    boolean nextTurn = (player && currentIndex == 6) || (!player && currentIndex == 13);
+
+    // Return updated position with lastPit set for extra turn logic
+    MancalaPosition newPosition = new MancalaPosition(newBoard, nextTurn ? player : !player);
+    newPosition.setLastPit(currentIndex); // Track the last pit where the stone landed
+    return newPosition;
   }
+
 
   public void playGame(Position startingPosition, boolean humanPlayFirst) {
     Scanner scanner = new Scanner(System.in);
@@ -476,10 +479,11 @@ public class MancalaGameSearch {
 
   // Method to check if the player earned an extra turn
   private boolean didPlayerEarnExtraTurn(Position current, boolean isPlayer1Turn) {
-    // Check if the player landed in their own Mancala after the move (adjust for your game's rules)
-    int mancalaIndex = isPlayer1Turn ? 6 : 13; // Adjust indices if necessary
-    return ((MancalaPosition) current).board[mancalaIndex] == 1; // Check if the player landed in their own Mancala
+    int lastPit = ((MancalaPosition) current).getLastPit(); // Add a method to track the last pit updated
+    int mancalaIndex = isPlayer1Turn ? 6 : 13; // Player 1's Mancala is at 6, Player 2's at 13
+    return lastPit == mancalaIndex; // Extra turn if the last stone lands in the player's Mancala
   }
+
 
 
 
