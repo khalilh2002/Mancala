@@ -3,7 +3,7 @@ import java.util.Arrays;
 
 public class GameStateManager {
 
-    public static void saveGameState(MancalaPosition position, boolean isPlayer1Turn, int mode, int difficulty, String fileName) {
+    public static void saveGameState(MancalaPosition position, boolean isPlayer1Turn, int mode, int difficulty, int heuristic, String fileName) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
             writer.println(Arrays.toString(position.board)); // Save board state
             writer.println(isPlayer1Turn);                  // Save whose turn it is
@@ -11,6 +11,7 @@ public class GameStateManager {
             // Save difficulty only if it's Player vs AI mode
             if (mode == 1) { // Assuming mode == 1 is Player vs AI
                 writer.println(difficulty);
+                writer.println(heuristic);
             }
             System.out.println("Game saved successfully!");
         } catch (IOException e) {
@@ -33,13 +34,16 @@ public class GameStateManager {
 
             // Default difficulty value if not set (for Player vs Player)
             int difficulty = -1;
+            int heuristic = 1;
             // Load difficulty if mode is Player vs AI
             if (mode == 1) {
                 String difficultyLine = reader.readLine(); // Read difficulty for Player vs AI
                 difficulty = Integer.parseInt(difficultyLine);
+                String heuristicLine = reader.readLine(); // Read difficulty for Player vs AI
+                heuristic = Integer.parseInt(heuristicLine);
             }
 
-            return new Object[]{new MancalaPosition(board, isPlayer1Turn), isPlayer1Turn, mode, difficulty};
+            return new Object[]{new MancalaPosition(board, isPlayer1Turn), isPlayer1Turn, mode, difficulty, heuristic};
         } catch (IOException e) {
             System.err.println("Error loading game: " + e.getMessage());
             return null;

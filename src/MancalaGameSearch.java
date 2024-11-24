@@ -4,6 +4,8 @@ import java.util.stream.IntStream;
 public class MancalaGameSearch {
 
   public static final boolean DEBUG = false;
+  private int heuristicType = 1; // Par défaut, utiliser l'heuristique simple
+
 
   public boolean drawnPosition(Position p) {
     MancalaPosition pos = (MancalaPosition) p;
@@ -15,10 +17,34 @@ public class MancalaGameSearch {
     return isGameOver(pos) && calculateScore(pos, player) > 0;
   }
 
+  public void setHeuristicType(int heuristicType) {
+    if (heuristicType == 1 || heuristicType == 2) {
+      this.heuristicType = heuristicType;
+    } else {
+      throw new IllegalArgumentException("Invalid heuristic type. Must be 1 or 2.");
+    }
+  }
+
+
+
   public float positionEvaluation(Position p, boolean player) {
     MancalaPosition pos = (MancalaPosition) p;
-    return calculateScore(pos, player);
+
+    switch (heuristicType) {
+      case 1: // Heuristique simple : différence des scores
+        return calculateScore(pos, player);
+
+      case 2: // Heuristique avancée : différence des scores + graines restantes
+        int seedsOnPlayerSide = player
+                ? Arrays.stream(pos.board, 0, 6).sum()
+                : Arrays.stream(pos.board, 7, 13).sum();
+        return calculateScore(pos, player) + 0.1f * seedsOnPlayerSide;
+
+      default:
+        throw new IllegalStateException("Unexpected heuristic type: " + heuristicType);
+    }
   }
+
 
   public void printPosition(Position p, int mode) {
     MancalaPosition pos = (MancalaPosition) p;
@@ -111,7 +137,7 @@ public class MancalaGameSearch {
     return new MancalaPosition(newBoard, nextTurn ? player : !player);
   }
 
-  private Vector easyAIMove(Position p, boolean player) {
+  private Vector easyAIMove(int depth, Position p, boolean player) {
     Position[] possibleMoves = possibleMoves(p, player);
 
     // If no moves are available, return the evaluation
@@ -122,18 +148,27 @@ public class MancalaGameSearch {
       return result;
     }
 
-
-    // Randomly select a move from the available moves
     Random random = new Random();
-    int randomIndex = random.nextInt(possibleMoves.length);
-    Position selectedMove = possibleMoves[randomIndex];
 
-    // Return the selected move as the "best" move
-    Vector result = new Vector();
-    result.addElement(positionEvaluation(selectedMove, player));
-    result.addElement(selectedMove);
-    return result;
+    // 80% chance to make a random move, 20% chance to use alpha-beta pruning
+    boolean useRandomMove = random.nextInt(100) < 90;
+
+    if (useRandomMove) {
+      // Randomly select a move from the available moves
+      int randomIndex = random.nextInt(possibleMoves.length);
+      Position selectedMove = possibleMoves[randomIndex];
+
+      Vector result = new Vector();
+      result.addElement(positionEvaluation(selectedMove, player));
+      result.addElement(selectedMove);
+      return result;
+    } else {
+      // Use alpha-beta pruning with a shallow depth for "easy" difficulty
+      int maxDepth = 2; // Shallow depth for easier AI
+      return alphaBetaHelper(depth, p, player, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, maxDepth);
+    }
   }
+
 
   private Vector mediumAIMove(int depth, Position p, boolean player) {
     Random random = new Random();
@@ -147,7 +182,7 @@ public class MancalaGameSearch {
       return alphaBetaHelper(depth, p, player, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, maxDepth);
     } else {
       // Make a random move like Easy AI
-      return easyAIMove(p, player);
+      return easyAIMove(depth,p, player);
     }
   }
 
@@ -188,7 +223,8 @@ public class MancalaGameSearch {
     Position current;
     boolean isPlayer1Turn = humanPlayFirst;
     int mode;
-    int difficulty = 2; // Default to Medium difficulty
+    int difficulty = 2;
+    // Default to Medium difficulty
 
     if (choice == 1) {
       // New game
@@ -207,7 +243,7 @@ public class MancalaGameSearch {
         }
       } while (mode != 1 && mode != 2);
 
-      // If Human vs AI, select AI difficulty
+      // Si Human vs AI, sélectionner la difficulté de l'IA
       if (mode == 1) {
         System.out.println("Select AI difficulty:");
         System.out.println("1. Easy");
@@ -225,9 +261,30 @@ public class MancalaGameSearch {
           }
         } while (difficulty < 1 || difficulty > 3);
       }
+
+      // Nouvelle étape : Sélection de l'heuristique
+      System.out.println("Select the heuristic to use:");
+      System.out.println("1. Simple heuristic (based on score)");
+      System.out.println("2. Advanced heuristic (score + seeds remaining)");
+      int heuristicChoice;
+      do {
+        System.out.print("Enter heuristic (1 or 2): ");
+        while (!scanner.hasNextInt()) {
+          System.out.println("Invalid input, please enter 1 or 2.");
+          scanner.next(); // Clear invalid input
+        }
+        heuristicChoice = scanner.nextInt();
+        if (heuristicChoice < 1 || heuristicChoice > 2) {
+          System.out.println("Invalid option, try again!");
+        }
+      } while (heuristicChoice < 1 || heuristicChoice > 2);
+
+      // Appliquer l'heuristique sélectionnée
+      setHeuristicType(heuristicChoice);
+
       current = startingPosition;
     } else {
-      // Load saved game
+      // Charger un jeu sauvegardé
       System.out.print("Enter the filename of the saved game: ");
       scanner.nextLine(); // Consume newline
       String fileName = scanner.nextLine();
@@ -240,14 +297,15 @@ public class MancalaGameSearch {
       isPlayer1Turn = (boolean) loadedState[1];
       mode = (int) loadedState[2];
       if (mode == 1) {
-        difficulty = (int) loadedState[3]; // Load difficulty if it's a Human vs AI game
+        difficulty = (int) loadedState[3];// Load difficulty if it's a Human vs AI game
+        heuristicType = (int) loadedState[4];
       }
     }
 
     while (true) {
       printPosition(current, mode); // Print board after each move
 
-      // Check game-ending conditions
+      // Check game-ending conditions before each turn
       if (wonPosition(current, false)) {
         System.out.println(mode == 1 ? "AI won!" : "Player 2 won!");
         break;
@@ -259,7 +317,7 @@ public class MancalaGameSearch {
         break;
       }
 
-      // Handle turn-based actions
+      // Handle Player 1's turn
       if (isPlayer1Turn) {
         System.out.println("Player 1's move:");
         Move playerMove = createMove(0, 5, ((MancalaPosition) current).board);
@@ -270,7 +328,7 @@ public class MancalaGameSearch {
           if (saveOption.equals("yes")) {
             System.out.print("Enter a filename to save the game: ");
             String fileName = scanner.next();
-            GameStateManager.saveGameState((MancalaPosition) current, isPlayer1Turn, mode, difficulty, fileName);
+            GameStateManager.saveGameState((MancalaPosition) current, isPlayer1Turn, mode, difficulty, heuristicType,fileName);
             System.out.println("Game saved successfully.");
           } else {
             System.out.println("Continuing without saving...");
@@ -278,38 +336,44 @@ public class MancalaGameSearch {
           continue; // Skip the turn and repeat the loop
         } else {
           current = makeMove(current, true, playerMove); // Apply Player 1's move
-          printPosition(current, mode); // Print the board after Player 1's move
           isPlayer1Turn = !isPlayer1Turn; // Toggle turn after valid move
         }
       }
 
-      // AI's turn (Human vs AI mode)
-      if (mode == 1 && !isPlayer1Turn) {
-        System.out.println("AI's move:");
-        Vector result = alphaBeta(0, current, false, difficulty); // Pass difficulty to AI
-        current = (Position) result.elementAt(1);
-        printPosition(current, mode); // Print the board after AI's move
-        isPlayer1Turn = !isPlayer1Turn; // Toggle turn after AI move
-      } else if (mode == 2 && !isPlayer1Turn) {
-        System.out.println("Player 2's move:");
-        Move playerMove = createMove(7, 12, ((MancalaPosition) current).board);
-        if (playerMove == null) { // Check if the player pressed 'S' to save
-          System.out.print("Do you want to save the game? (Yes/No): ");
-          String saveOption = scanner.next().toLowerCase();
-          if (saveOption.equals("yes")) {
-            System.out.print("Enter a filename to save the game: ");
-            String fileName = scanner.next();
-            GameStateManager.saveGameState((MancalaPosition) current, isPlayer1Turn, mode, difficulty, fileName);
-            System.out.println("Game saved successfully.");
-          } else {
-            System.out.println("Continuing without saving...");
+      // Handle AI's turn (or Player 2's turn in Human vs Human)
+      if (!isPlayer1Turn) {
+        if (mode == 1) {
+          System.out.println("AI's move:");
+          Vector result = alphaBeta(0, current, false, difficulty); // Pass difficulty to AI
+          Position bestMove = (Position) result.elementAt(1);
+
+          if (bestMove == null) { // No valid moves (shouldn't happen if game-ending checks work)
+            System.out.println("AI cannot move. Ending game.");
+            break;
           }
-          continue; // Skip the turn and repeat the loop
+
+          current = bestMove; // Apply AI's move
         } else {
-          current = makeMove(current, false, playerMove); // Apply Player 2's move
-          printPosition(current, mode); // Print the board after Player 2's move
-          isPlayer1Turn = !isPlayer1Turn; // Toggle turn after valid move
+          System.out.println("Player 2's move:");
+          Move playerMove = createMove(7, 12, ((MancalaPosition) current).board);
+          if (playerMove == null) { // Check if the player pressed 'S' to save
+            System.out.print("Do you want to save the game? (Yes/No): ");
+            String saveOption = scanner.next().toLowerCase();
+            if (saveOption.equals("yes")) {
+              System.out.print("Enter a filename to save the game: ");
+              String fileName = scanner.next();
+              GameStateManager.saveGameState((MancalaPosition) current, isPlayer1Turn, mode, difficulty, heuristicType,fileName);
+              System.out.println("Game saved successfully.");
+            } else {
+              System.out.println("Continuing without saving...");
+            }
+            continue; // Skip the turn and repeat the loop
+          } else {
+            current = makeMove(current, false, playerMove); // Apply Player 2's move
+          }
         }
+
+        isPlayer1Turn = !isPlayer1Turn; // Toggle turn after valid move
       }
     }
   }
@@ -349,7 +413,7 @@ public class MancalaGameSearch {
     int maxDepth;
     switch (difficulty) {
       case 1: // Easy AI
-        return easyAIMove(p, player);
+        return easyAIMove(depth,p, player);
       case 2: // Medium AI
         return mediumAIMove(depth, p, player);
       case 3: // Hard AI
