@@ -190,6 +190,23 @@ public class MancalaGameSearch {
     return player ? playerScore - computerScore : computerScore - playerScore;
   }
 
+  private void applyCaptureLogic(int[] board, int currentIndex, boolean player) {
+    if (player && currentIndex >= 0 && currentIndex <= 5 && board[currentIndex] == 1) {
+      int oppositeIndex = 12 - currentIndex; // Opponent's pit
+      if (board[oppositeIndex] > 0) {
+        board[6] += board[currentIndex] + board[oppositeIndex]; // Player 1's scoring pit
+        board[currentIndex] = 0;
+        board[oppositeIndex] = 0;
+      }
+    } else if (!player && currentIndex >= 7 && currentIndex <= 12 && board[currentIndex] == 1) {
+      int oppositeIndex = 12 - currentIndex; // Opponent's pit
+      if (board[oppositeIndex] > 0) {
+        board[13] += board[currentIndex] + board[oppositeIndex]; // Player 2's scoring pit
+        board[currentIndex] = 0;
+        board[oppositeIndex] = 0;
+      }
+    }
+  }
 
   public Position makeMove(Position p, boolean player, Move m) {
     MancalaPosition pos = (MancalaPosition) p;
@@ -213,22 +230,8 @@ public class MancalaGameSearch {
       seeds--;
     }
 
-    // Capture logic (Condition 1)
-    if (player && currentIndex >= 0 && currentIndex <= 5 && newBoard[currentIndex] == 1) {
-      int oppositeIndex = 12 - currentIndex; // Opposite pit index
-      if (newBoard[oppositeIndex] > 0) {
-        newBoard[6] += newBoard[currentIndex] + newBoard[oppositeIndex]; // Add to player's scoring pit
-        newBoard[currentIndex] = 0;
-        newBoard[oppositeIndex] = 0;
-      }
-    } else if (!player && currentIndex >= 7 && currentIndex <= 12 && newBoard[currentIndex] == 1) {
-      int oppositeIndex = 12 - currentIndex; // Opposite pit index
-      if (newBoard[oppositeIndex] > 0) {
-        newBoard[13] += newBoard[currentIndex] + newBoard[oppositeIndex]; // Add to opponent's scoring pit
-        newBoard[currentIndex] = 0;
-        newBoard[oppositeIndex] = 0;
-      }
-    }
+    // Apply capture logic after distributing stones
+    applyCaptureLogic(newBoard, currentIndex, player);
 
     // Check if the last seed landed in the player's scoring pit (Condition 2)
     boolean nextTurn = (player && currentIndex == 6) || (!player && currentIndex == 13);
@@ -238,6 +241,7 @@ public class MancalaGameSearch {
     newPosition.setLastPit(currentIndex); // Track the last pit where the stone landed
     return newPosition;
   }
+
 
 
   public void playGame(Position startingPosition, boolean humanPlayFirst) {
