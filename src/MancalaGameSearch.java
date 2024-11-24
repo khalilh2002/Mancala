@@ -86,57 +86,7 @@ public class MancalaGameSearch {
     return moves.toArray(new Position[0]);
   }
 
-  public Position makeMove(Position p, boolean player, Move m) {
-    MancalaPosition pos = (MancalaPosition) p;
-    MancalaMove move = (MancalaMove) m;
 
-    int[] newBoard = pos.board.clone();
-    int pitIndex = move.pitIndex;
-    int seeds = newBoard[pitIndex];
-    newBoard[pitIndex] = 0;
-
-    int currentIndex = pitIndex;
-    while (seeds > 0) {
-      currentIndex = (currentIndex + 1) % 14;
-
-      // Skip the opponent's scoring pit
-      if ((player && currentIndex == 13) || (!player && currentIndex == 6)) {
-        continue;
-      }
-
-      newBoard[currentIndex]++;
-      seeds--;
-    }
-
-    // Check if the last seed landed in the player's scoring pit
-    if (player && currentIndex == 6) {
-
-    } else if (!player && currentIndex == 13) {
-
-    }
-
-    // Capture logic
-    if (player && currentIndex >= 0 && currentIndex <= 5 && newBoard[currentIndex] == 1) {
-      int oppositeIndex = 12 - currentIndex; // Opposite pit index
-      if (newBoard[oppositeIndex] > 0) {
-        newBoard[6] += newBoard[currentIndex] + newBoard[oppositeIndex]; // Add to player's scoring pit
-        newBoard[currentIndex] = 0;
-        newBoard[oppositeIndex] = 0;
-      }
-    } else if (!player && currentIndex >= 7 && currentIndex <= 12 && newBoard[currentIndex] == 1) {
-      int oppositeIndex = 12 - currentIndex; // Opposite pit index
-      if (newBoard[oppositeIndex] > 0) {
-        newBoard[13] += newBoard[currentIndex] + newBoard[oppositeIndex]; // Add to AI's scoring pit
-        newBoard[currentIndex] = 0;
-        newBoard[oppositeIndex] = 0;
-      }
-    }
-
-    // Check if the player gets another turn
-    boolean nextTurn = (player && currentIndex == 6) || (!player && currentIndex == 13);
-
-    return new MancalaPosition(newBoard, nextTurn ? player : !player);
-  }
 
   private Vector easyAIMove(int depth, Position p, boolean player) {
     Position[] possibleMoves = possibleMoves(p, player);
@@ -241,6 +191,52 @@ public class MancalaGameSearch {
   }
 
 
+  public Position makeMove(Position p, boolean player, Move m) {
+    MancalaPosition pos = (MancalaPosition) p;
+    MancalaMove move = (MancalaMove) m;
+
+    int[] newBoard = pos.board.clone();
+    int pitIndex = move.pitIndex;
+    int seeds = newBoard[pitIndex];
+    newBoard[pitIndex] = 0;
+
+    int currentIndex = pitIndex;
+    while (seeds > 0) {
+      currentIndex = (currentIndex + 1) % 14;
+
+      // Skip the opponent's scoring pit
+      if ((player && currentIndex == 13) || (!player && currentIndex == 6)) {
+        continue;
+      }
+
+      newBoard[currentIndex]++;
+      seeds--;
+    }
+
+    // Check if the last seed landed in the player's scoring pit (Condition 2)
+    boolean nextTurn = (player && currentIndex == 6) || (!player && currentIndex == 13);
+
+    // Capture logic (Condition 1)
+    if (player && currentIndex >= 0 && currentIndex <= 5 && newBoard[currentIndex] == 1) {
+      int oppositeIndex = 12 - currentIndex; // Opposite pit index
+      if (newBoard[oppositeIndex] > 0) {
+        newBoard[6] += newBoard[currentIndex] + newBoard[oppositeIndex]; // Add to player's scoring pit
+        newBoard[currentIndex] = 0;
+        newBoard[oppositeIndex] = 0;
+      }
+    } else if (!player && currentIndex >= 7 && currentIndex <= 12 && newBoard[currentIndex] == 1) {
+      int oppositeIndex = 12 - currentIndex; // Opposite pit index
+      if (newBoard[oppositeIndex] > 0) {
+        newBoard[13] += newBoard[currentIndex] + newBoard[oppositeIndex]; // Add to opponent's scoring pit
+        newBoard[currentIndex] = 0;
+        newBoard[oppositeIndex] = 0;
+      }
+    }
+
+    // Return updated position with turn change (if not an extra turn)
+    return new MancalaPosition(newBoard, nextTurn ? player : !player);
+  }
+
   public void playGame(Position startingPosition, boolean humanPlayFirst) {
     Scanner scanner = new Scanner(System.in);
 
@@ -283,8 +279,7 @@ public class MancalaGameSearch {
       } while (mode != 1 && mode != 2);
 
       if (mode == 1) { // Human vs AI: Set difficulty
-        MancalaGameSearch.possbileHintP2 = -1 ;
-
+        MancalaGameSearch.possbileHintP2 = -1;
 
         System.out.println("Select AI difficulty:");
         System.out.println("1. Easy");
@@ -356,6 +351,7 @@ public class MancalaGameSearch {
       }
 
       // Handle Player 1's turn
+      // Handle Player 1's turn
       if (isPlayer1Turn) {
         System.out.println("Player 1's move:");
         while (true) {
@@ -377,30 +373,35 @@ public class MancalaGameSearch {
               System.out.println("Game saved successfully!");
             } else if (optionInput.equals("H")) {
               int hintIndex = getHint(current, true); // true for Player 1
-              if (hintIndex == -1 ) {
+              if (hintIndex == -1) {
                 System.out.println("No valid moves available for a hint.");
-
               } else if (hintIndex == -2) {
-                System.out.println("Warning you reached max hint(3) ");
+                System.out.println("Warning you reached max hint(3)");
               } else {
                 System.out.println("Hint: Pick pit " + hintIndex + " as your next move.");
               }
-
             } else {
               System.out.println("Invalid input! Please enter 'S' to save or 'H' for a hint.");
             }
           } else {
             current = makeMove(current, true, playerMove);
             printPosition(current, mode);
-            isPlayer1Turn = !isPlayer1Turn; // Toggle turn
-            break;
+
+            // After move, check if Player 1 earned an extra turn
+            if (didPlayerEarnExtraTurn(current, true)) {
+              // Player 1 earned an extra turn, keep playing
+              continue; // No turn switch, stay on Player 1
+            } else {
+              isPlayer1Turn = false; // Move to Player 2's turn
+              break;
+            }
           }
         }
       }
 
-      // Handle AI's turn or Player 2's turn
+// Handle AI's turn or Player 2's turn
       if (!isPlayer1Turn) {
-        if (mode == 1) {
+        if (mode == 1) { // AI's turn
           System.out.println("AI's move:");
           Vector result = alphaBeta(0, current, false, difficulty);
           Position bestMove = (Position) result.elementAt(1);
@@ -411,7 +412,14 @@ public class MancalaGameSearch {
           }
 
           current = bestMove;
-        } else {
+          // After move, check if AI earned an extra turn
+          if (didPlayerEarnExtraTurn(current, false)) {
+            // AI earned an extra turn, keep playing
+            continue; // No turn switch, stay on AI
+          } else {
+            isPlayer1Turn = true; // Move to Player 1's turn
+          }
+        } else { // Player 2's move
           System.out.println("Player 2's move:");
           while (true) {
             Move playerMove = createMove(7, 12, ((MancalaPosition) current).board);
@@ -434,27 +442,46 @@ public class MancalaGameSearch {
                 int hintIndex = getHint(current, false); // false for Player 2
                 if (hintIndex == -1) {
                   System.out.println("No valid moves available for a hint.");
-
-                } else if (hintIndex==-2){
+                } else if (hintIndex == -2) {
                   System.out.println("Warning you reached max hint(3)");
-
-                }else {
+                } else {
                   System.out.println("Hint: Pick pit " + hintIndex + " as your next move.");
-
                 }
               } else {
                 System.out.println("Invalid input! Please enter 'S' to save or 'H' for a hint.");
               }
             } else {
               current = makeMove(current, false, playerMove);
-              break;
+              printPosition(current, mode);
+
+              // After move, check if Player 2 earned an extra turn
+              if (didPlayerEarnExtraTurn(current, false)) {
+                // Player 2 earned an extra turn, keep playing
+                continue; // No turn switch, stay on Player 2
+              } else {
+                isPlayer1Turn = true; // Move to Player 1's turn
+                break;
+              }
             }
           }
         }
-        isPlayer1Turn = !isPlayer1Turn; // Toggle turn
       }
+
     }
   }
+
+
+
+
+
+  // Method to check if the player earned an extra turn
+  private boolean didPlayerEarnExtraTurn(Position current, boolean isPlayer1Turn) {
+    // Check if the player landed in their own Mancala after the move (adjust for your game's rules)
+    int mancalaIndex = isPlayer1Turn ? 6 : 13; // Adjust indices if necessary
+    return ((MancalaPosition) current).board[mancalaIndex] == 1; // Check if the player landed in their own Mancala
+  }
+
+
 
 
 
