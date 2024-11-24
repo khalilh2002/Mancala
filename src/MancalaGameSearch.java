@@ -418,10 +418,15 @@ public class MancalaGameSearch {
                 System.out.println("Game saved successfully.");
               } else if (optionInput.equals("H")) {
                 int hintIndex = getHint(current, false); // false for Player 2
-                if (hintIndex != -1) {
-                  System.out.println("Hint: Pick pit " + hintIndex + " as your next move.");
-                } else {
+                if (hintIndex == -1) {
                   System.out.println("No valid moves available for a hint.");
+
+                } else if (hintIndex==-2){
+                  System.out.println("Warning you reached max hint(3)");
+
+                }else {
+                  System.out.println("Hint: Pick pit " + hintIndex + " as your next move.");
+
                 }
               } else {
                 System.out.println("Invalid input! Please enter 'S' to save or 'H' for a hint.");
