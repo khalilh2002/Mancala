@@ -6,6 +6,7 @@ public class MancalaGameSearch {
   public static final boolean DEBUG = false;
   private int heuristicType = 1; // Par défaut, utiliser l'heuristique simple
   public static int possbileHint = 3 ;
+  public static int possbileHintP2 = 3 ;
 
   public boolean drawnPosition(Position p) {
     MancalaPosition pos = (MancalaPosition) p;
@@ -188,9 +189,13 @@ public class MancalaGameSearch {
 
   // Add this method to MancalaGameSearch
   public int getHint(Position p, boolean player) {
-    if (MancalaGameSearch.possbileHint==0 || MancalaGameSearch.possbileHint < 0){
+    if (player && (MancalaGameSearch.possbileHint<1) ){
       return -2;
     }
+    if ((!player) && (MancalaGameSearch.possbileHintP2<1) ){
+      return -2;
+    }
+
     Vector result = alphaBeta(0, p, player, 3); // Depth 3 for a reasonably good suggestion
     Position bestMove = (Position) result.elementAt(1);
 
@@ -204,7 +209,13 @@ public class MancalaGameSearch {
 
       for (int i = start; i <= end; i++) {
         if (current.board[i] != suggested.board[i]) {
-          MancalaGameSearch.possbileHint--;
+          if (player){
+
+            MancalaGameSearch.possbileHint--;
+          }else {
+
+            MancalaGameSearch.possbileHintP2--;
+          }
           return i; // Return the pit index to play
         }
       }
@@ -272,6 +283,9 @@ public class MancalaGameSearch {
       } while (mode != 1 && mode != 2);
 
       if (mode == 1) { // Human vs AI: Set difficulty
+        MancalaGameSearch.possbileHintP2 = -1 ;
+
+
         System.out.println("Select AI difficulty:");
         System.out.println("1. Easy");
         System.out.println("2. Medium");

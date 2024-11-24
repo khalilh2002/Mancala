@@ -13,6 +13,10 @@ public class GameStateManager {
                 writer.println(difficulty);
                 writer.println(heuristic);
             }
+            writer.println(MancalaGameSearch.possbileHint);
+            if (mode != 1){
+              writer.println(MancalaGameSearch.possbileHintP2);
+            }
         } catch (IOException e) {
             System.err.println("Error saving game: " + e.getMessage());
         }
@@ -41,7 +45,10 @@ public class GameStateManager {
                 String heuristicLine = reader.readLine(); // Read difficulty for Player vs AI
                 heuristic = Integer.parseInt(heuristicLine);
             }
-
+            MancalaGameSearch.possbileHint =Integer.parseInt(reader.readLine()) ;
+          if (mode != 1){
+            MancalaGameSearch.possbileHintP2 = Integer.parseInt(reader.readLine()) ;
+          }
             return new Object[]{new MancalaPosition(board, isPlayer1Turn), isPlayer1Turn, mode, difficulty, heuristic};
         } catch (IOException e) {
             System.err.println("Error loading game: " + e.getMessage());
